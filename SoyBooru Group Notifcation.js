@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Soybooru New Message Notifications
 // @namespace    http://tampermonkey.net/
-// @version      3.2
-// @description  Sends desktop notifications for new chat messages with group names and image post IDs. (Leave Tab Open)
+// @version      3.3
+// @description  Sends desktop notifications for new chat messages with group names, image post IDs, and site emotes.
 // @author       You
 // @match        *://*.soybooru.com/messages/*
 // @grant        GM_setValue
@@ -79,13 +79,27 @@
                     }
                 }
 
-                // 4. Clean and parse text content (remove blockquotes/replies from the summary)
+                // 4. Clean and parse text content (handling emotes and stripping blockquotes)
                 const textContainer = msgElement.querySelector('.prose');
                 let finalBodyText = "New message received.";
 
                 if (textContainer) {
                     const tempClone = textContainer.cloneNode(true);
+                    
+                    // Remove quotes/replies from the text summary
                     tempClone.querySelectorAll('.bbcode-quote').forEach(q => q.remove());
+                    
+                    // Convert site emote images into their textual codes (e.g., replace <img> with "[:fact:]")
+                    tempClone.querySelectorAll('img.bbcode-emote').forEach(emote => {
+                        const emoteCode = emote.getAttribute('alt');
+                        if (emoteCode) {
+                            // Converts ':fact:' format to match your desired '[:fact:]' layout rule
+                            const formattedCode = emoteCode.startsWith(':') && emoteCode.endsWith(':') 
+                                ? `[${emoteCode}]` 
+                                : emoteCode;
+                            emote.replaceWith(document.createTextNode(formattedCode));
+                        }
+                    });
                     
                     const pureText = tempClone.textContent.trim();
                     if (pureText.length > 0) {
