@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      3.3
 // @description  Sends desktop notifications for new chat messages with group names, image post IDs, and site emotes.
-// @match        *://*.soybooru.com/messages/*
+// @match        https://soybooru.com/messages/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_notification
