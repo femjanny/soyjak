@@ -1,6 +1,7 @@
 // ==UserScript==
-// @name         SoyBooru Nametwink Blocker
+// @name         SoyBooru | Nametwink Blocker
 // @namespace    http://tampermonkey.net/
+// @version      2.0
 // @description  blur people you don't like.
 // @match        https://soybooru.com/*
 // @grant        none
@@ -52,6 +53,16 @@
 
     function toggleBlur(element, condition) {
         if (!element) return;
+        
+        // HARD BLACKLIST: Completely protects the main layout elements from ever being touched
+        const blacklist = [
+            'post-comments-card', 
+            'post-comments-content', 
+            'post-comments-section', 
+            'post-comments-list'
+        ];
+        if (blacklist.includes(element.id)) return;
+        
         if (condition) {
             element.classList.add('censor-target');
         } else {
@@ -71,9 +82,9 @@
         return null;
     }
 
-    // ---------------- DEDICATED SECTIONS (BLOATED & EXPLICIT) ----------------
+    // ---------------- DEDICATED SECTIONS ----------------
 
-    // 1. FORUM POSTS (Targets the exact ID-based containers you provided)
+    // 1. FORUM POSTS
     function processForumPosts(blocked) {
         const forumPosts = document.querySelectorAll('[id^="p"].bg-card');
         forumPosts.forEach(post => {
@@ -89,7 +100,7 @@
         });
     }
 
-    // 2. STANDARD COMMENTS (Targets only the internal .comment-item block wrapper cleanly)
+    // 2. STANDARD COMMENTS
     function processStandardComments(blocked) {
         const comments = document.querySelectorAll('.comment-item');
         comments.forEach(comment => {
@@ -106,7 +117,7 @@
         });
     }
 
-    // 3. GALLERY / FEED CARDS (Targets the outer post-card link)
+    // 3. GALLERY / FEED CARDS
     function processGalleryCards(blocked) {
         const cards = document.querySelectorAll('a[id="post-card-link"]');
         cards.forEach(card => {
@@ -122,7 +133,7 @@
         });
     }
 
-    // 4. MAIN POST MEDIA (Only targets the image/video itself, leaves the info card alone)
+    // 4. MAIN POST MEDIA
     function processMainPostView(blocked) {
         const uploaderLink = document.querySelector('#post-info-left #post-uploader-link');
         if (!uploaderLink) return;
@@ -134,10 +145,8 @@
 
         if (username) {
             const isB = isBlocked(username, blocked);
-            // Only blurs the actual uploaded media elements on the page
             const mainMedia = document.querySelectorAll('img[src*="/api/booru/posts/"], video[src*="/api/booru/posts/"]');
             mainMedia.forEach(media => {
-                // Ensure we don't blur tiny thumbnails matching this pattern
                 if (!media.src.includes('thumbnail')) {
                     toggleBlur(media, isB);
                 }
@@ -145,12 +154,25 @@
         }
     }
 
-    // 5. GLOBAL AVATARS (Small generic catch-all)
+    // 5. GLOBAL AVATARS
     function processGlobalAvatars(blocked) {
         document.querySelectorAll('img[alt="User avatar"]').forEach(avatar => {
             const username = extractUsername(avatar.getAttribute('src'));
             if (username) {
-                toggleBlur(avatar, isBlocked(username, blocked));
+                const targetBlocked = isBlocked(username, blocked);
+                
+                // Target the exact targeted element parent blocks
+                const commentContainer = avatar.closest('.comment-item') || avatar.closest('[id^="p"].bg-card') || avatar.closest('a[id="post-card-link"]');
+                
+                if (commentContainer) {
+                    toggleBlur(commentContainer, targetBlocked);
+                } else {
+                    // Safety check on backup wrapper fallback
+                    const parent = avatar.parentElement;
+                    if (parent && !['post-comments-card', 'post-comments-content', 'post-comments-section'].includes(parent.id)) {
+                        toggleBlur(parent, targetBlocked);
+                    }
+                }
             }
         });
     }
