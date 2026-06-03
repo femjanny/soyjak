@@ -13,7 +13,7 @@
     // ==================== CONFIGURATION ====================
     const BLOCK_OPACITY = 1; // Opacity of the block overlay (0.0 to 1.0)
     const FONT_FAMILY = 'monospace'; // Font style (e.g., 'sans-serif', 'Arial', 'monospace')
-    const FONT_SIZE = '10px'; // Font size for the "BLOCKED USER" text
+    const FONT_SIZE = '22px'; // Font size for the "BLOCKED USER" text
     const HOVER_DELAY_SECONDS = 0; // How many seconds to hover before revealing content
     // =======================================================
 
@@ -54,7 +54,7 @@
             transition: opacity 0.2s ease, visibility 0.2s ease !important;
             transition-delay: ${HOVER_DELAY_SECONDS}s !important;
         }
-        
+
         /* OVERRIDE: Destroys all animations when hovering so the reveal is instant */
         .censor-target:hover::after {
             opacity: 0 !important;
