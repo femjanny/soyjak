@@ -1,14 +1,21 @@
 // ==UserScript==
 // @name         SoyBooru | Nametwink Blocker
 // @namespace    http://tampermonkey.net/
-// @version      2.1
-// @description  Blur people you don't like. Fixed to protect description and post info layout.
+// @version      2.2
+// @description  Blur people you don't like. Fixed to protect description and post info layout with configurable hover delays.
 // @match        https://soybooru.com/*
 // @grant        none
 // ==/UserScript==
 
 (function () {
     'use strict';
+
+    // ==================== CONFIGURATION ====================
+    const BLOCK_OPACITY = 0.95;       // Opacity of the block overlay (0.0 to 1.0)
+    const FONT_FAMILY = 'monospace';  // Font style (e.g., 'sans-serif', 'Arial', 'monospace')
+    const FONT_SIZE = '10px';         // Font size for the "BLOCKED USER" text
+    const HOVER_DELAY_SECONDS = 0.5;  // How many seconds to hover before revealing content
+    // =======================================================
 
     const ICON_BAN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4" y1="4" x2="20" y2="20"></line></svg>`;
     const ICON_PLUS = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`;
@@ -29,10 +36,10 @@
             content: "BLOCKED USER" !important;
             position: absolute !important;
             inset: 0 !important;
-            background-color: rgba(30, 30, 30, 0.95) !important;
+            background-color: rgba(30, 30, 30, ${BLOCK_OPACITY}) !important;
             color: rgba(255, 255, 255, 0.7) !important;
-            font-family: monospace !important;
-            font-size: 10px !important;
+            font-family: ${FONT_FAMILY} !important;
+            font-size: ${FONT_SIZE} !important;
             font-weight: bold !important;
             display: flex !important;
             align-items: center !important;
@@ -40,9 +47,16 @@
             z-index: 50 !important;
             cursor: help !important;
             border: 1px dashed rgba(255,255,255,0.3) !important;
+            
+            /* Setup smooth hover transition */
+            opacity: 1 !important;
+            visibility: visible !important;
+            transition: opacity 0.2s ease, visibility 0.2s ease !important;
+            transition-delay: ${HOVER_DELAY_SECONDS}s !important;
         }
         .censor-target:hover::after {
-            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
 
         /* Protect critical layout elements from being censored */
