@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Soyjak | Formatting Helper
+// @name         Soyjak | Formatting Helper (Reply Box Broken Tho)
 // @namespace    https://soyjak.st/
 // @version      2.3
 // @description  Theme-native square formatting buttons + black-core normal weight glow live preview
