@@ -7,7 +7,7 @@ This repository contains a collection of personal scripts, including utilities d
 ## Content Categories
 
 * **Soysphere Utilities:** Scripts tailored for specific imageboards and related platforms.
-* **General Scripts:** Personal quality-of-life tools and miscellaneous automation.
+* **General Scripts:** Personal quality-of-life tools.
 
 ---
 
