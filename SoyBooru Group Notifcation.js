@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Soybooru New Message Notifications
+// @name         Soybooru | Group Chat Desktop Notifications
 // @namespace    http://tampermonkey.net/
 // @version      3.3
-// @description  Sends desktop notifications for new chat messages with group names, image post IDs, and site emotes.
+// @description  Sends desktop notifications for new chat messages with group names, image post IDs, and site emotes. Keep the group chat tab open.
 // @match        https://soybooru.com/messages/*
 // @grant        GM_setValue
 // @grant        GM_getValue
