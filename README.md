@@ -1,15 +1,6 @@
 # Personal Script Repository
 
-This repository contains a collection of personal scripts, including utilities designed for use on Soysphere-related sites and other general-purpose scripts.
-
----
-
-## Content Categories
-
-* **Soysphere Utilities:** Scripts tailored for specific imageboards and related platforms.
-* **General Scripts:** Personal quality-of-life tools.
-
----
+This repository contains a collection of personal scripts, including utilities designed for use on Soysphere-related sites and other general-purpose quality-of-life scripts.
 
 ## Disclaimer
 
