@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         #PostID Downloader (FIXED)
+// @name         SoyBooru | #PostID Downloader
 // @namespace    https://soybooru.com/
 // @version      1.5
-// @description  Adds another download button that downloads posts as #POSTID for images + videos
+// @description  Adds another download button that downloads posts as #POSTID for any files.
 // @match        https://soybooru.com/*
 // @grant        none
 // ==/UserScript==
