@@ -1,20 +1,20 @@
 // ==UserScript==
 // @name         SoyBooru | Nametwink Blocker
 // @namespace    http://tampermonkey.net/
-// @version      2.2
-// @description  Blur people you don't like. Fixed to protect description and post info layout with configurable hover delays.
+// @version      2.4
+// @description  Blur people you don't like. Optimized to fix performance bottlenecks and ensure instant, lag-free hover reveals.
 // @match        https://soybooru.com/*
 // @grant        none
 // ==/UserScript==
 
-(function () {
+(function() {
     'use strict';
 
     // ==================== CONFIGURATION ====================
-    const BLOCK_OPACITY = 0.95;       // Opacity of the block overlay (0.0 to 1.0)
-    const FONT_FAMILY = 'monospace';  // Font style (e.g., 'sans-serif', 'Arial', 'monospace')
-    const FONT_SIZE = '10px';         // Font size for the "BLOCKED USER" text
-    const HOVER_DELAY_SECONDS = 0.5;  // How many seconds to hover before revealing content
+    const BLOCK_OPACITY = 1; // Opacity of the block overlay (0.0 to 1.0)
+    const FONT_FAMILY = 'monospace'; // Font style (e.g., 'sans-serif', 'Arial', 'monospace')
+    const FONT_SIZE = '10px'; // Font size for the "BLOCKED USER" text
+    const HOVER_DELAY_SECONDS = 0; // How many seconds to hover before revealing content
     // =======================================================
 
     const ICON_BAN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4" y1="4" x2="20" y2="20"></line></svg>`;
@@ -47,16 +47,20 @@
             z-index: 50 !important;
             cursor: help !important;
             border: 1px dashed rgba(255,255,255,0.3) !important;
-            
-            /* Setup smooth hover transition */
+
+            /* Smoothly fade back in when you mouse out */
             opacity: 1 !important;
             visibility: visible !important;
             transition: opacity 0.2s ease, visibility 0.2s ease !important;
             transition-delay: ${HOVER_DELAY_SECONDS}s !important;
         }
+        
+        /* OVERRIDE: Destroys all animations when hovering so the reveal is instant */
         .censor-target:hover::after {
             opacity: 0 !important;
             visibility: hidden !important;
+            transition: none !important;
+            transition-delay: 0s !important;
         }
 
         /* Protect critical layout elements from being censored */
@@ -78,7 +82,6 @@
     function toggleBlur(element, shouldBlock) {
         if (!element) return;
 
-        // HARD BLACKLIST - never censor these containers
         const protectedIds = new Set([
             'post-info-card-content',
             'post-info-container',
@@ -105,29 +108,25 @@
         return match ? match[1] : null;
     }
 
-    // ====================== MAIN POST PAGE ======================
-    function processMainPostView(blocked) {
-        // Uploader section
+    // ====================== PROCESS DOM ELEMENTS ======================
+    function applyBlur() {
+        const blocked = getBlocked();
+
+        // Main View
         const uploaderDate = document.getElementById('post-uploader-date');
         if (uploaderDate) {
             const uploaderLink = document.getElementById('post-uploader-link');
             const username = uploaderLink ? extractUsername(uploaderLink.href) : null;
-            if (username) {
-                toggleBlur(uploaderDate, isBlocked(username, blocked));
-            }
+            if (username) toggleBlur(uploaderDate, isBlocked(username, blocked));
         }
 
-        // Approved by section
         const approvedBy = document.getElementById('post-approved-by');
         if (approvedBy) {
             const approvedLink = approvedBy.querySelector('a[href^="/user/"]');
             const username = approvedLink ? extractUsername(approvedLink.href) : null;
-            if (username) {
-                toggleBlur(approvedBy, isBlocked(username, blocked));
-            }
+            if (username) toggleBlur(approvedBy, isBlocked(username, blocked));
         }
 
-        // Main media (image/video)
         const uploaderLink = document.getElementById('post-uploader-link');
         if (uploaderLink) {
             const username = extractUsername(uploaderLink.href);
@@ -140,74 +139,50 @@
                 });
             }
         }
-    }
 
-    // ====================== OTHER SECTIONS ======================
-    function processForumPosts(blocked) {
+        // Forum Posts
         document.querySelectorAll('[id^="p"].bg-card').forEach(post => {
             const img = post.querySelector('img[src*="/api/user/"]');
             if (!img) return;
             const user = extractUsername(img.src);
             if (user) toggleBlur(post, isBlocked(user, blocked));
         });
-    }
 
-    function processComments(blocked) {
+        // Comments
         document.querySelectorAll('.comment-item').forEach(comment => {
             const link = comment.querySelector('a[href^="/user/"]');
             if (!link) return;
             const user = extractUsername(link.href);
             if (user) toggleBlur(comment, isBlocked(user, blocked));
         });
-    }
 
-    function processGalleryCards(blocked) {
+        // Gallery Cards
         document.querySelectorAll('a[id="post-card-link"]').forEach(card => {
             const img = card.querySelector('img[src*="/api/user/"]');
             if (!img) return;
             const user = extractUsername(img.src);
             if (user) toggleBlur(card, isBlocked(user, blocked));
         });
-    }
 
-    function processGlobalAvatars(blocked) {
+        // Precise Global Avatars
         document.querySelectorAll('img[alt="User avatar"]').forEach(avatar => {
             const user = extractUsername(avatar.src);
             if (!user) return;
 
             const shouldBlock = isBlocked(user, blocked);
+            const preciseTargets = ['#post-uploader-date', '#post-approved-by'];
 
-            // Precise targeting only
-            const preciseTargets = [
-                '#post-uploader-date',
-                '#post-approved-by'
-            ];
-
-            let target = null;
             for (const sel of preciseTargets) {
                 if (avatar.closest(sel)) {
-                    target = document.querySelector(sel);
+                    const target = document.querySelector(sel);
+                    if (target) toggleBlur(target, shouldBlock);
                     break;
                 }
-            }
-
-            if (target) {
-                toggleBlur(target, shouldBlock);
             }
         });
     }
 
-    // Master run
-    function applyBlur() {
-        const blocked = getBlocked();
-        processMainPostView(blocked);
-        processForumPosts(blocked);
-        processComments(blocked);
-        processGalleryCards(blocked);
-        processGlobalAvatars(blocked);
-    }
-
-    // ====================== UI ======================
+    // ====================== UI MANAGEMENT ======================
     function renderList() {
         const display = document.getElementById('block-list-display');
         if (!display) return;
@@ -305,18 +280,23 @@
         container.appendChild(btn);
     }
 
-    // ====================== RUN ======================
-    setTimeout(() => {
-        const loop = () => {
-            applyBlur();
-            requestAnimationFrame(loop);
-        };
-        loop();
+    // ====================== OBSERVER INITIALIZATION ======================
 
-        setInterval(() => {
-            initNavbar();
-            initProfileBlockButton();
-        }, 800);
-    }, 800);
+    // Initial paint run
+    applyBlur();
+    initNavbar();
+    initProfileBlockButton();
+
+    // Dynamically watch page changes without layout lockups
+    const observer = new MutationObserver(() => {
+        applyBlur();
+        initNavbar();
+        initProfileBlockButton();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
 
 })();
