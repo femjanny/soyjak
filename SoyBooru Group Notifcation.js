@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Soybooru | Group Chat Desktop Notifications
 // @namespace    http://tampermonkey.net/
-// @version      3.3
+// @version      3.4
 // @description  Sends desktop notifications for new chat messages with group names, image post IDs, and site emotes. Keep the group chat tab open.
 // @match        https://soybooru.com/messages*
 // @grant        GM_setValue
@@ -14,6 +14,7 @@
 
     let isMuted = GM_getValue("soy_notif_muted", false);
     const seenMessages = new Set();
+    let currentGroupName = ""; // Tracks the active chat room title
 
     // Ask for permission to show desktop notifications when the page loads
     if (Notification.permission !== "granted" && Notification.permission !== "denied") {
@@ -84,22 +85,22 @@
 
                 if (textContainer) {
                     const tempClone = textContainer.cloneNode(true);
-                    
+
                     // Remove quotes/replies from the text summary
                     tempClone.querySelectorAll('.bbcode-quote').forEach(q => q.remove());
-                    
+
                     // Convert site emote images into their textual codes (e.g., replace <img> with "[:fact:]")
                     tempClone.querySelectorAll('img.bbcode-emote').forEach(emote => {
                         const emoteCode = emote.getAttribute('alt');
                         if (emoteCode) {
                             // Converts ':fact:' format to match your desired '[:fact:]' layout rule
-                            const formattedCode = emoteCode.startsWith(':') && emoteCode.endsWith(':') 
-                                ? `[${emoteCode}]` 
+                            const formattedCode = emoteCode.startsWith(':') && emoteCode.endsWith(':')
+                                ? `[${emoteCode}]`
                                 : emoteCode;
                             emote.replaceWith(document.createTextNode(formattedCode));
                         }
                     });
-                    
+
                     const pureText = tempClone.textContent.trim();
                     if (pureText.length > 0) {
                         finalBodyText = pureText.length > 120 ? pureText.substring(0, 117) + "..." : pureText;
@@ -162,8 +163,18 @@
         headerMenu.insertBefore(btn, headerMenu.firstChild);
     }
 
-    // Watcher engine: Monitors the web page live for any newly added chat messages
+    // Watcher engine: Monitors the web page live for any newly added chat messages or navigation swaps
     const liveWatcher = new MutationObserver((mutations) => {
+        // Detect if the user switched chat rooms entirely
+        const groupTitleEl = document.getElementById('ui-card-title');
+        const activeGroup = groupTitleEl ? groupTitleEl.textContent.trim() : "";
+        
+        if (activeGroup && activeGroup !== currentGroupName) {
+            currentGroupName = activeGroup;
+            seenMessages.clear(); // Wipe out old logs from the prior room
+            cacheExistingMessages(); // Log whatever messages are currently in this newly loaded room
+        }
+
         injectMuteButton();
 
         for (const mutation of mutations) {
@@ -188,13 +199,18 @@
     });
 
     // Fire initialization settings when the page handles loading states
-    if (document.body) {
+    function init() {
+        const groupTitleEl = document.getElementById('ui-card-title');
+        if (groupTitleEl) currentGroupName = groupTitleEl.textContent.trim();
         cacheExistingMessages();
         injectMuteButton();
+    }
+
+    if (document.body) {
+        init();
     } else {
         window.addEventListener('DOMContentLoaded', () => {
-            cacheExistingMessages();
-            injectMuteButton();
+            init();
         });
     }
 
