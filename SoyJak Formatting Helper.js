@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Soyjak | Up-Drop Draggable Formatting Helper
 // @namespace    https://soyjak.st/
-// @version      5.5
+// @version      5.5.1
 // @description  Up-drop style formatting tab. Renders content above the tab with an attached reset button when dragged.
 // @match        https://soyjak.st/*
 // @grant        none
@@ -51,7 +51,7 @@
         ["<", "<", "", "orange"],
         [">", ">", "", "green"],
         ["^", "^", "", "lightblue"],
-        ["[[Oy]]", "[[", "]]", "oy"],
+        ["(((Oy)))", "(((", ")))", "oy"],
         ["'''Bold'''", "'''", "'''", "bold"],
         ["''Italic''", "''", "''", "italic"],
         ["~~Strike~~", "~~", "~~", "strike"],
@@ -73,7 +73,7 @@
         text = text.replace(/^&lt;(.*?)$/gm, `<span style="${STYLES.orange}">&lt;$1</span>`);
         text = text.replace(/^&gt;(.*?)$/gm, `<span style="${STYLES.green}">&gt;$1</span>`);
         text = text.replace(/^\^(.*?)$/gm, `<span style="${STYLES.lightblue}">^$1</span>`);
-        text = text.replace(/\[\[(.*?)\]\]/gs, `<span style="${STYLES.oy}">[[$1]]</span>`);
+        text = text.replace(/\(\(\((.*?)\)\)\)/gs, `<span style="${STYLES.oy}">((($1)))</span>`);
         text = text.replace(/-~-(.*?)-~-/gs, `<span style="${STYLES.doll}">$1</span>`);
         text = text.replace(/\+=(.*?)=\+/gs, `<span style="${STYLES.big}">$1</span>`);
         text = text.replace(/'''(.*?)'''/gs, `<span style="${STYLES.bold}">$1</span>`);
