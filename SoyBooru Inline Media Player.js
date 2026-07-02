@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SoyBooru | Inline Media Player
 // @namespace    https://soybooru.com/
-// @version      1.0
+// @version      1.1
 // @description  Adds a medium-sized, auto-fitting draggable player with a clean #PostID filename downloader.
 // @description  Also if you want to keep file name of a file just use 'Save as' than clicking the button.
 // @match        *://*.soybooru.com/*
@@ -45,7 +45,7 @@
         .vp-controls-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 14px;
         }
         .vp-title {
             white-space: nowrap;
@@ -57,22 +57,38 @@
             background: none;
             border: none;
             color: #aaa;
-            font-size: 12px;
+            font-size: 14px;
             cursor: pointer;
-            line-height: 1;
-            padding: 0 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            transition: color 0.1s ease, transform 0.1s ease;
         }
-        .vp-dl-btn:hover { color: #007bff; }
+        .vp-dl-btn:hover { 
+            color: #007bff; 
+            transform: scale(1.15);
+        }
         .vp-close-btn {
             background: none;
             border: none;
             color: #aaa;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
-            line-height: 1;
-            padding: 0 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            transition: color 0.1s ease, transform 0.1s ease;
         }
-        .vp-close-btn:hover { color: #fff; }
+        .vp-close-btn:hover { 
+            color: #fff; 
+            transform: scale(1.15);
+        }
         .vp-content-wrapper {
             flex: 1;
             display: flex;
