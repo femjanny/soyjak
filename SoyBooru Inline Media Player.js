@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SoyBooru | Inline Media Player
 // @namespace    https://soybooru.com/
-// @version      1.3
+// @version      1.7
 // @description  Adds a medium-sized, auto-fitting draggable player with a clean #PostID filename downloader. Text is selectable and drag bug is fixed.
 // @description  Also if you want to keep file name of a file just use 'Save as' than clicking the button.
 // @match        *://*.soybooru.com/*
@@ -11,7 +11,7 @@
 (function() {
     'use strict';
 
-    // Inject sharp styling for the container
+    // Inject sharp styling for the container and overlaid toggle text
     const style = document.createElement('style');
     style.textContent = `
         .vp-container {
@@ -105,18 +105,37 @@
             object-fit: contain;
             display: block;
         }
-        .vp-toggle-btn {
+
+        /* Overlay wrapper styles */
+        .vp-wrapper {
+            position: relative;
             display: inline-block;
-            margin-left: 4px;
+        }
+        .vp-toggle-btn {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            z-index: 5;
+            background: none;
             color: #007bff;
             text-decoration: none;
-            font-size: 11px;
-            font-weight: normal;
+            font-size: 18px; /* Significantly enhanced scale for clarity */
+            font-weight: bold;
             cursor: pointer;
             font-family: monospace;
-            vertical-align: middle;
+            padding: 4px 6px; /* Expanded invisible click buffer target bounds */
+            border: none;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+            text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000;
         }
-        .vp-toggle-btn:hover { text-decoration: underline; }
+        .vp-wrapper:hover .vp-toggle-btn {
+            opacity: 1;
+        }
+        .vp-toggle-btn:hover {
+            text-decoration: none;
+            color: #fff;
+        }
 
         /* Utility class to stop chaotic highlighting during drag tasks */
         .vp-dragging-active {
@@ -133,7 +152,6 @@
         player.id = 'video-player';
         player.className = 'vp-container';
 
-        // Balanced medium default footprint
         player.style.width = '440px';
         player.style.height = '360px';
         player.style.left = '150px';
@@ -158,8 +176,6 @@
         // Handles auto-fitting with strict medium sizing limit constraints
         function adjustPlayerSize(naturalWidth, naturalHeight) {
             const barHeight = 25;
-
-            // Strictly cap max automated dimensions to a clear medium frame
             const maxWidth = 550;
             const maxHeight = 450;
 
@@ -175,7 +191,6 @@
                 targetHeight = maxHeight;
             }
 
-            // Fallback rules if native sizes read too tiny
             if (targetWidth < 280) {
                 targetHeight = (280 / targetWidth) * targetHeight;
                 targetWidth = 280;
@@ -185,7 +200,6 @@
             player.style.height = `${Math.round(targetHeight + barHeight)}px`;
         }
 
-        // Try Loading as Video
         const testVideo = document.createElement('video');
         testVideo.src = mediaUrl;
         testVideo.preload = 'auto';
@@ -199,7 +213,6 @@
             adjustPlayerSize(testVideo.videoWidth, testVideo.videoHeight);
         };
 
-        // Fallback to Image if video framework reports structural errors
         testVideo.onerror = function() {
             const img = document.createElement('img');
             img.className = 'vp-media';
@@ -214,10 +227,8 @@
             };
         };
 
-        // Close Feature
         player.querySelector('#vp-close').addEventListener('click', () => player.remove());
 
-        // Header Blob Downloader Implementation
         player.querySelector('#vp-download').addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -240,13 +251,12 @@
                 else if (type.includes('png')) ext = 'png';
                 else if (type.includes('webp')) ext = 'webp';
 
-                // Cleans title string completely down to just the raw numbers if it contains "Post #"
                 let safeName = titleText.replace(/Post\s*#/i, '').replace('#', '').trim();
 
                 const objUrl = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = objUrl;
-                a.download = `#${safeName}.${ext}`; // Outputs cleanly as #(id).(ext)
+                a.download = `#${safeName}.${ext}`;
 
                 document.body.appendChild(a);
                 a.click();
@@ -260,16 +270,12 @@
             }
         });
 
-        // Draggable Mechanics
         const bar = player.querySelector('.vp-bar');
         let isDragging = false;
         let offsetX, offsetY;
 
         bar.addEventListener('mousedown', (e) => {
-            // Prevent dragging if clicking buttons OR trying to select title text
             if (e.target.closest('.vp-controls-right') || e.target.closest('.vp-title')) return;
-
-            // Block native window text selection behavior while moving the panel
             e.preventDefault();
             document.body.classList.add('vp-dragging-active');
 
@@ -329,6 +335,12 @@
 
             if (!mediaUrl) return;
 
+            const wrapper = document.createElement('div');
+            wrapper.className = 'vp-wrapper';
+
+            link.parentNode.insertBefore(wrapper, link);
+            wrapper.appendChild(link);
+
             const toggle = document.createElement('a');
             toggle.className = 'vp-toggle-btn';
             toggle.textContent = '[+]';
@@ -340,7 +352,7 @@
                 createPlayer(mediaUrl, titleText);
             });
 
-            link.parentNode.insertBefore(toggle, link.nextSibling);
+            wrapper.appendChild(toggle);
         });
     }
 
