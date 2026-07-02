@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         SoyBooru | Inline Media Player
 // @namespace    https://soybooru.com/
-// @version      1.1
-// @description  Adds a medium-sized, auto-fitting draggable player with a clean #PostID filename downloader.
+// @version      1.3
+// @description  Adds a medium-sized, auto-fitting draggable player with a clean #PostID filename downloader. Text is selectable and drag bug is fixed.
 // @description  Also if you want to keep file name of a file just use 'Save as' than clicking the button.
 // @match        *://*.soybooru.com/*
 // @grant        none
@@ -36,7 +36,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            user-select: none;
             font-family: sans-serif;
             font-size: 11px;
             border-bottom: 1px solid #444;
@@ -46,12 +45,15 @@
             display: flex;
             align-items: center;
             gap: 14px;
+            user-select: none;
         }
         .vp-title {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             margin-right: 10px;
+            user-select: text;
+            cursor: text;
         }
         .vp-dl-btn {
             background: none;
@@ -67,8 +69,8 @@
             height: 20px;
             transition: color 0.1s ease, transform 0.1s ease;
         }
-        .vp-dl-btn:hover { 
-            color: #007bff; 
+        .vp-dl-btn:hover {
+            color: #007bff;
             transform: scale(1.15);
         }
         .vp-close-btn {
@@ -85,8 +87,8 @@
             height: 20px;
             transition: color 0.1s ease, transform 0.1s ease;
         }
-        .vp-close-btn:hover { 
-            color: #fff; 
+        .vp-close-btn:hover {
+            color: #fff;
             transform: scale(1.15);
         }
         .vp-content-wrapper {
@@ -115,6 +117,11 @@
             vertical-align: middle;
         }
         .vp-toggle-btn:hover { text-decoration: underline; }
+
+        /* Utility class to stop chaotic highlighting during drag tasks */
+        .vp-dragging-active {
+            user-select: none !important;
+        }
     `;
     document.head.appendChild(style);
 
@@ -259,7 +266,13 @@
         let offsetX, offsetY;
 
         bar.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.vp-controls-right')) return;
+            // Prevent dragging if clicking buttons OR trying to select title text
+            if (e.target.closest('.vp-controls-right') || e.target.closest('.vp-title')) return;
+
+            // Block native window text selection behavior while moving the panel
+            e.preventDefault();
+            document.body.classList.add('vp-dragging-active');
+
             isDragging = true;
             offsetX = e.clientX - player.offsetLeft;
             offsetY = e.clientY - player.offsetTop;
@@ -275,6 +288,7 @@
 
         function stopDrag() {
             isDragging = false;
+            document.body.classList.remove('vp-dragging-active');
             document.removeEventListener('mousemove', drag);
             document.removeEventListener('mouseup', stopDrag);
         }
