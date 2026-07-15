@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SoyBooru | Inline Media Player
 // @namespace    https://soybooru.com/
-// @version      2.0
+// @version      2.3
 // @description  Adds a medium-sized, auto-fitting draggable player with thick side handles and active native corner resizing.
 // @description  Also if you want to keep file name of a file just use 'Save as' than clicking the button.
 // @match        *://*.soybooru.com/*
@@ -123,17 +123,17 @@
         .vp-corner-tr { top: 0px; right: 0px; }
         .vp-corner-bl { bottom: 0px; left: 0px; }
 
-        /* Overlay wrapper styles */
-        .vp-wrapper {
-            position: relative;
-            display: inline-block;
+        /* Overlay wrapper styles - applied directly to the attachment links */
+        a.bbcode-attachment, a.bbcode-thumb {
+            position: relative !important;
+            display: inline-block !important;
         }
         .vp-toggle-btn {
             position: absolute;
             bottom: 0px;
             right: 0px;
-            z-index: 5;
-            background: none;
+            z-index: 50;
+            background: none !important; /* No background box */
             color: #007bff;
             text-decoration: none;
             font-size: 18px;
@@ -141,13 +141,19 @@
             cursor: pointer;
             font-family: monospace;
             padding: 4px 6px;
-            border: none;
+            border: none !important; /* No borders */
             opacity: 0;
             transition: opacity 0.1s ease;
-            text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000;
+            text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000; /* Drop shadow for visibility over dark/light images */
         }
-        .vp-wrapper:hover .vp-toggle-btn { opacity: 1; }
-        .vp-toggle-btn:hover { text-decoration: none; color: #fff; }
+        a.bbcode-attachment:hover .vp-toggle-btn,
+        a.bbcode-thumb:hover .vp-toggle-btn {
+            opacity: 1;
+        }
+        .vp-toggle-btn:hover {
+            text-decoration: none;
+            color: #fff;
+        }
 
         .vp-dragging-active { user-select: none !important; }
     `;
@@ -167,7 +173,6 @@
         player.style.top = '150px';
 
         player.innerHTML = `
-            <!-- Thick Border Drag Handles Inside Frame Bounds -->
             <div class="vp-edge-handle vp-edge-top"></div>
             <div class="vp-edge-handle vp-edge-bottom"></div>
             <div class="vp-edge-handle vp-edge-left"></div>
@@ -323,8 +328,14 @@
         }
     }
 
+    let observer;
+
     function setupLinks() {
         const links = document.querySelectorAll('a.bbcode-attachment:not(.vp-processed), a.bbcode-thumb:not(.vp-processed)');
+        if (links.length === 0) return;
+
+        // Temporarily pause the mutation observer to prevent feedback loops
+        if (observer) observer.disconnect();
 
         links.forEach(link => {
             link.classList.add('vp-processed');
@@ -358,16 +369,10 @@
 
             if (!mediaUrl) return;
 
-            const wrapper = document.createElement('div');
-            wrapper.className = 'vp-wrapper';
-
-            link.parentNode.insertBefore(wrapper, link);
-            wrapper.appendChild(link);
-
-            const toggle = document.createElement('a');
+            // Append the toggle button directly into the link node
+            const toggle = document.createElement('span');
             toggle.className = 'vp-toggle-btn';
             toggle.textContent = '[+]';
-            toggle.href = '#';
 
             toggle.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -375,12 +380,22 @@
                 createPlayer(mediaUrl, titleText);
             });
 
-            wrapper.appendChild(toggle);
+            link.appendChild(toggle);
         });
+
+        // Restart the observer
+        if (observer) {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
     }
 
+    // Initialize
     setupLinks();
-    const observer = new MutationObserver(setupLinks);
+
+    observer = new MutationObserver(setupLinks);
     observer.observe(document.body, {
         childList: true,
         subtree: true
