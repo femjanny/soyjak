@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         SoyBooru | Inline Media Player
 // @namespace    https://soybooru.com/
-// @version      1.7
-// @description  Adds a medium-sized, auto-fitting draggable player with a clean #PostID filename downloader. Text is selectable and drag bug is fixed.
+// @version      2.0
+// @description  Adds a medium-sized, auto-fitting draggable player with thick side handles and active native corner resizing.
 // @description  Also if you want to keep file name of a file just use 'Save as' than clicking the button.
 // @match        *://*.soybooru.com/*
 // @grant        none
@@ -21,12 +21,14 @@
             border: 1px solid #444;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border-radius: 0px;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
             resize: both;
-            min-width: 200px;
+            overflow: hidden; /* Required by browsers for 'resize: both' to generate handles */
+            min-width: 220px;
             min-height: 150px;
+            padding: 0;
+            box-sizing: border-box;
         }
         .vp-bar {
             background: #2d2d2d;
@@ -40,6 +42,8 @@
             font-size: 11px;
             border-bottom: 1px solid #444;
             flex-shrink: 0;
+            position: relative;
+            z-index: 2;
         }
         .vp-controls-right {
             display: flex;
@@ -55,11 +59,10 @@
             user-select: text;
             cursor: text;
         }
-        .vp-dl-btn {
+        .vp-dl-btn, .vp-close-btn {
             background: none;
             border: none;
             color: #aaa;
-            font-size: 14px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -68,29 +71,14 @@
             width: 20px;
             height: 20px;
             transition: color 0.1s ease, transform 0.1s ease;
+            position: relative;
+            z-index: 3;
         }
-        .vp-dl-btn:hover {
-            color: #007bff;
-            transform: scale(1.15);
-        }
-        .vp-close-btn {
-            background: none;
-            border: none;
-            color: #aaa;
-            font-size: 18px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            transition: color 0.1s ease, transform 0.1s ease;
-        }
-        .vp-close-btn:hover {
-            color: #fff;
-            transform: scale(1.15);
-        }
+        .vp-dl-btn { font-size: 14px; }
+        .vp-close-btn { font-size: 18px; }
+        .vp-dl-btn:hover { color: #007bff; transform: scale(1.15); }
+        .vp-close-btn:hover { color: #fff; transform: scale(1.15); }
+
         .vp-content-wrapper {
             flex: 1;
             display: flex;
@@ -98,6 +86,9 @@
             justify-content: center;
             background: #000;
             overflow: hidden;
+            cursor: default;
+            position: relative;
+            z-index: 1;
         }
         .vp-media {
             width: 100%;
@@ -105,6 +96,32 @@
             object-fit: contain;
             display: block;
         }
+
+        /* INVISIBLE HIGH-ACCURACY DRAG BORDERS (12px Thickness) */
+        .vp-edge-handle {
+            position: absolute;
+            z-index: 10;
+            background: transparent;
+            cursor: move;
+        }
+        .vp-edge-top    { top: 0px; left: 0px; right: 0px; height: 12px; }
+        .vp-edge-left   { left: 0px; top: 0px; bottom: 0px; width: 12px; }
+        /* Offset bottom/right handles away from corner to prevent hijacking native browser resize zone */
+        .vp-edge-bottom { bottom: 0px; left: 0px; right: 25px; height: 12px; }
+        .vp-edge-right  { right: 0px; top: 0px; bottom: 25px; width: 12px; }
+
+        /* Corner handle additions for thick grab zones */
+        .vp-corner-handle {
+            position: absolute;
+            z-index: 11;
+            width: 12px;
+            height: 12px;
+            background: transparent;
+            cursor: move;
+        }
+        .vp-corner-tl { top: 0px; left: 0px; }
+        .vp-corner-tr { top: 0px; right: 0px; }
+        .vp-corner-bl { bottom: 0px; left: 0px; }
 
         /* Overlay wrapper styles */
         .vp-wrapper {
@@ -119,28 +136,20 @@
             background: none;
             color: #007bff;
             text-decoration: none;
-            font-size: 18px; /* Significantly enhanced scale for clarity */
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             font-family: monospace;
-            padding: 4px 6px; /* Expanded invisible click buffer target bounds */
+            padding: 4px 6px;
             border: none;
             opacity: 0;
             transition: opacity 0.1s ease;
             text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000;
         }
-        .vp-wrapper:hover .vp-toggle-btn {
-            opacity: 1;
-        }
-        .vp-toggle-btn:hover {
-            text-decoration: none;
-            color: #fff;
-        }
+        .vp-wrapper:hover .vp-toggle-btn { opacity: 1; }
+        .vp-toggle-btn:hover { text-decoration: none; color: #fff; }
 
-        /* Utility class to stop chaotic highlighting during drag tasks */
-        .vp-dragging-active {
-            user-select: none !important;
-        }
+        .vp-dragging-active { user-select: none !important; }
     `;
     document.head.appendChild(style);
 
@@ -158,6 +167,15 @@
         player.style.top = '150px';
 
         player.innerHTML = `
+            <!-- Thick Border Drag Handles Inside Frame Bounds -->
+            <div class="vp-edge-handle vp-edge-top"></div>
+            <div class="vp-edge-handle vp-edge-bottom"></div>
+            <div class="vp-edge-handle vp-edge-left"></div>
+            <div class="vp-edge-handle vp-edge-right"></div>
+            <div class="vp-corner-handle vp-corner-tl"></div>
+            <div class="vp-corner-handle vp-corner-tr"></div>
+            <div class="vp-corner-handle vp-corner-bl"></div>
+
             <div class="vp-bar">
                 <span class="vp-title" id="vp-title">${titleText}</span>
                 <div class="vp-controls-right">
@@ -173,7 +191,6 @@
         document.body.appendChild(player);
         const contentWrapper = player.querySelector('#vp-content');
 
-        // Handles auto-fitting with strict medium sizing limit constraints
         function adjustPlayerSize(naturalWidth, naturalHeight) {
             const barHeight = 25;
             const maxWidth = 550;
@@ -270,12 +287,13 @@
             }
         });
 
-        const bar = player.querySelector('.vp-bar');
+        // DRAG ENGINE
         let isDragging = false;
         let offsetX, offsetY;
 
-        bar.addEventListener('mousedown', (e) => {
+        function startDrag(e) {
             if (e.target.closest('.vp-controls-right') || e.target.closest('.vp-title')) return;
+
             e.preventDefault();
             document.body.classList.add('vp-dragging-active');
 
@@ -284,6 +302,11 @@
             offsetY = e.clientY - player.offsetTop;
             document.addEventListener('mousemove', drag);
             document.addEventListener('mouseup', stopDrag);
+        }
+
+        player.querySelector('.vp-bar').addEventListener('mousedown', startDrag);
+        player.querySelectorAll('.vp-edge-handle, .vp-corner-handle').forEach(handle => {
+            handle.addEventListener('mousedown', startDrag);
         });
 
         function drag(e) {
